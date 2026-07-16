@@ -1,0 +1,5 @@
+CREATE TABLE system_status (
+    id BIGSERIAL PRIMARY KEY,
+    service_name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
