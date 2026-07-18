@@ -33,6 +33,16 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(DeviceIdentityMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleDeviceIdentityMismatch(
+            DeviceIdentityMismatchException exception
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                exception.getMessage()
+        );
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException exception

@@ -40,6 +40,9 @@ public class Device {
     @Column(name = "firmware_version", length = 50)
     private String firmwareVersion;
 
+    @Column(name = "device_key_hash", length = 64)
+    private String deviceKeyHash;
+
     @Column(name = "last_seen_at")
     private Instant lastSeenAt;
 
@@ -128,6 +131,14 @@ public class Device {
 
     public void setFirmwareVersion(String firmwareVersion) {
         this.firmwareVersion = firmwareVersion;
+    }
+
+    public String getDeviceKeyHash() {
+        return deviceKeyHash;
+    }
+
+    public void setDeviceKeyHash(String deviceKeyHash) {
+        this.deviceKeyHash = deviceKeyHash;
     }
 
     public Instant getLastSeenAt() {
