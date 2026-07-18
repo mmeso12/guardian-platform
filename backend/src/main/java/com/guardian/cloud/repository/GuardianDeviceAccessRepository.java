@@ -22,4 +22,9 @@ public interface GuardianDeviceAccessRepository
             Long userId,
             Long deviceId
     );
+
+    void deleteByUserIdAndDeviceId(
+            Long userId,
+            Long deviceId
+    );
 }

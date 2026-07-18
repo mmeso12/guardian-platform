@@ -52,6 +52,15 @@ public class Device {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "paired", nullable = false)
+    private boolean paired = false;
+
+    @Column(name = "paired_at")
+    private Instant pairedAt;
+
+    @Column(name = "pairing_code_hash", length = 64)
+    private String pairingCodeHash;
+
     @PrePersist
     void beforeInsert() {
         Instant now = Instant.now();
@@ -155,5 +164,29 @@ public class Device {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isPaired() {
+        return paired;
+    }
+
+    public void setPaired(boolean paired) {
+        this.paired = paired;
+    }
+
+    public Instant getPairedAt() {
+        return pairedAt;
+    }
+
+    public void setPairedAt(Instant pairedAt) {
+        this.pairedAt = pairedAt;
+    }
+
+    public String getPairingCodeHash() {
+        return pairingCodeHash;
+    }
+
+    public void setPairingCodeHash(String pairingCodeHash) {
+        this.pairingCodeHash = pairingCodeHash;
     }
 }

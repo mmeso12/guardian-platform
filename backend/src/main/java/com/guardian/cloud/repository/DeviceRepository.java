@@ -6,6 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface DeviceRepository extends JpaRepository<Device, Long> {
 
@@ -14,4 +18,14 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     boolean existsByDeviceUid(String deviceUid);
 
     List<Device> findAllByStatus(DeviceStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT d
+            FROM Device d
+            WHERE d.deviceUid = :deviceUid
+            """)
+    Optional<Device> findByDeviceUidForUpdate(
+            @Param("deviceUid") String deviceUid
+);
 }

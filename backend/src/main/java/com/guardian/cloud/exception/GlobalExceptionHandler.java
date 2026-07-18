@@ -83,6 +83,36 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidPairingCodeException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidPairingCode(
+            InvalidPairingCodeException exception
+    ) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(DeviceAlreadyPairedException.class)
+    public ResponseEntity<Map<String, Object>> handleDeviceAlreadyPaired(
+            DeviceAlreadyPairedException exception
+    ) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(DeviceAccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleDeviceAccessDenied(
+            DeviceAccessDeniedException exception
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                exception.getMessage()
+        );
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException exception
