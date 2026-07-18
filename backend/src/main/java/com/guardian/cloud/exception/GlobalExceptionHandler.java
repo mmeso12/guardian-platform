@@ -43,6 +43,16 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(DuplicateDeviceEventException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicateDeviceEvent(
+            DuplicateDeviceEventException exception
+    ) {
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                exception.getMessage()
+        );
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException exception
