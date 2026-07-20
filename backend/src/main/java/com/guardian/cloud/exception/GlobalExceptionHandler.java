@@ -83,6 +83,26 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(LocationAccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleLocationAccessDenied(
+            LocationAccessDeniedException exception
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(InvalidLocationRangeException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidLocationRange(
+            InvalidLocationRangeException exception
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage()
+        );
+    }
+
     @ExceptionHandler(InvalidPairingCodeException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidPairingCode(
             InvalidPairingCodeException exception
