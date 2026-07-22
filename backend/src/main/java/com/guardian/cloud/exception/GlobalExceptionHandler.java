@@ -169,6 +169,38 @@ public class GlobalExceptionHandler {
         );
     }
 
+	@ExceptionHandler(GeofenceNotFoundException.class)
+	public ResponseEntity<Map<String, Object>>
+	handleGeofenceNotFound(
+			GeofenceNotFoundException exception
+	) {
+		return buildResponse(
+				HttpStatus.NOT_FOUND,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(GeofenceAccessDeniedException.class)
+	public ResponseEntity<Map<String, Object>>
+	handleGeofenceAccessDenied(
+			GeofenceAccessDeniedException exception
+	) {
+		return buildResponse(
+				HttpStatus.FORBIDDEN,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(DuplicateGeofenceNameException.class)
+	public ResponseEntity<Map<String, Object>>
+	handleDuplicateGeofenceName(
+			DuplicateGeofenceNameException exception
+	) {
+		return buildResponse(
+				HttpStatus.CONFLICT,
+				exception.getMessage()
+		);
+	}
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
