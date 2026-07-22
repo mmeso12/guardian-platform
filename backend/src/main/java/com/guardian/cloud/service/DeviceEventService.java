@@ -21,13 +21,16 @@ public class DeviceEventService {
 
     private final DeviceRepository deviceRepository;
     private final DeviceEventRepository deviceEventRepository;
+    private final GuardianAlertFactory guardianAlertFactory;
 
     public DeviceEventService(
             DeviceRepository deviceRepository,
-            DeviceEventRepository deviceEventRepository
+            DeviceEventRepository deviceEventRepository,
+            GuardianAlertFactory guardianAlertFactory
     ) {
         this.deviceRepository = deviceRepository;
         this.deviceEventRepository = deviceEventRepository;
+        this.guardianAlertFactory = guardianAlertFactory;
     }
 
     @Transactional
@@ -71,6 +74,8 @@ public class DeviceEventService {
 
         DeviceEvent savedEvent =
                 deviceEventRepository.save(event);
+                
+        guardianAlertFactory.createFromDeviceEvent(savedEvent);
 
         applyDeviceState(device, request);
         device.setLastSeenAt(Instant.now());
