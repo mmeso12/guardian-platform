@@ -5,6 +5,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.guardian.cloud.exception.AlertAccessDeniedException;
+import com.guardian.cloud.exception.GuardianAlertNotFoundException;
+import com.guardian.cloud.exception.InvalidAlertStateException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -83,6 +86,39 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(GuardianAlertNotFoundException.class)
+	public ResponseEntity<Map<String, Object>>
+	handleGuardianAlertNotFound(
+			GuardianAlertNotFoundException exception
+	) {
+	return buildResponse(
+			HttpStatus.NOT_FOUND,
+			exception.getMessage()
+	);
+	}
+
+	@ExceptionHandler(AlertAccessDeniedException.class)
+	public ResponseEntity<Map<String, Object>>
+	handleAlertAccessDenied(
+			AlertAccessDeniedException exception
+	) {
+	return buildResponse(
+			HttpStatus.FORBIDDEN,
+			exception.getMessage()
+	);
+	}
+
+	@ExceptionHandler(InvalidAlertStateException.class)
+	public ResponseEntity<Map<String, Object>>
+	handleInvalidAlertState(
+			InvalidAlertStateException exception
+	) {
+	return buildResponse(
+			HttpStatus.CONFLICT,
+			exception.getMessage()
+	);
+	}
+
     @ExceptionHandler(LocationAccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleLocationAccessDenied(
             LocationAccessDeniedException exception
@@ -132,6 +168,7 @@ public class GlobalExceptionHandler {
                 exception.getMessage()
         );
     }
+
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(

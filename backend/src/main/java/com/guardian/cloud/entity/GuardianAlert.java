@@ -46,6 +46,26 @@ public class GuardianAlert {
     @JoinColumn(name = "device_id", nullable = false)
     private Device device;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "acknowledged_by_user_id")
+    private GuardianUser acknowledgedBy;
+
+    @Column(name = "acknowledged_at")
+    private Instant acknowledgedAt;
+
+    @Column(name = "acknowledgement_note", length = 1000)
+    private String acknowledgementNote;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resolved_by_user_id")
+    private GuardianUser resolvedBy;
+
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
+
+    @Column(name = "resolution_note", length = 1000)
+    private String resolutionNote;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false, length = 50)
     private EventType eventType;
@@ -126,6 +146,54 @@ public class GuardianAlert {
     public void setDevice(Device device) {
         this.device = device;
     }
+
+    public GuardianUser getAcknowledgedBy() {
+        return acknowledgedBy;
+    }
+
+    public void setAcknowledgedBy(GuardianUser acknowledgedBy) {
+        this.acknowledgedBy = acknowledgedBy;
+    }
+
+    public Instant getAcknowledgedAt() {
+        return acknowledgedAt;
+    }
+
+    public void setAcknowledgedAt(Instant acknowledgedAt) {
+        this.acknowledgedAt = acknowledgedAt;
+    }
+
+    public String getAcknowledgementNote() {
+        return acknowledgementNote;
+    }
+
+    public void setAcknowledgementNote(String acknowledgementNote) {
+        this.acknowledgementNote = acknowledgementNote;
+    }
+
+    public GuardianUser getResolvedBy() {
+        return resolvedBy;
+    }
+
+    public void setResolvedBy(GuardianUser resolvedBy) {
+        this.resolvedBy = resolvedBy;
+    }
+
+    public Instant getResolvedAt() {
+        return resolvedAt;
+    }
+
+    public void setResolvedAt(Instant resolvedAt) {
+        this.resolvedAt = resolvedAt;
+    }
+
+    public String getResolutionNote() {
+        return resolutionNote;
+    }
+
+    public void setResolutionNote(String resolutionNote) {
+        this.resolutionNote = resolutionNote;
+}
 
     public EventType getEventType() {
         return eventType;
