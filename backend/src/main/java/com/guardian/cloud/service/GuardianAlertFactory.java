@@ -7,24 +7,39 @@ import com.guardian.cloud.entity.EventType;
 import com.guardian.cloud.entity.GuardianAlert;
 import com.guardian.cloud.repository.GuardianAlertRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class GuardianAlertFactory {
 
-    private final GuardianAlertRepository guardianAlertRepository;
+    private final GuardianAlertRepository
+            guardianAlertRepository;
+
+    private final GuardianNotificationService
+            guardianNotificationService;
 
     public GuardianAlertFactory(
-            GuardianAlertRepository guardianAlertRepository
+            GuardianAlertRepository
+                    guardianAlertRepository,
+            GuardianNotificationService
+                    guardianNotificationService
     ) {
-        this.guardianAlertRepository = guardianAlertRepository;
+        this.guardianAlertRepository =
+                guardianAlertRepository;
+
+        this.guardianNotificationService =
+                guardianNotificationService;
     }
 
+    @Transactional
     public GuardianAlert createFromDeviceEvent(
             DeviceEvent event
     ) {
         boolean alreadyExists =
                 guardianAlertRepository
-                        .existsByDeviceEventId(event.getId());
+                        .existsByDeviceEventId(
+                                event.getId()
+                        );
 
         if (alreadyExists) {
             return null;
@@ -37,16 +52,32 @@ public class GuardianAlertFactory {
         alert.setEventType(event.getEventType());
         alert.setSeverity(event.getSeverity());
         alert.setStatus(AlertStatus.OPEN);
-        alert.setTitle(resolveTitle(event.getEventType()));
-        alert.setMessage(resolveMessage(event));
+
+        alert.setTitle(
+                resolveTitle(event.getEventType())
+        );
+
+        alert.setMessage(
+                resolveMessage(event)
+        );
+
         alert.setLatitude(event.getLatitude());
         alert.setLongitude(event.getLongitude());
         alert.setOpenedAt(event.getRecordedAt());
 
-        return guardianAlertRepository.save(alert);
+        GuardianAlert savedAlert =
+                guardianAlertRepository.save(alert);
+
+        guardianNotificationService.createForAlert(
+                savedAlert
+        );
+
+        return savedAlert;
     }
 
-    private String resolveTitle(EventType eventType) {
+    private String resolveTitle(
+            EventType eventType
+    ) {
         return switch (eventType) {
             case SOS ->
                     "Emergency SOS activated";
@@ -71,40 +102,55 @@ public class GuardianAlertFactory {
         };
     }
 
-    private String resolveMessage(DeviceEvent event) {
+    private String resolveMessage(
+            DeviceEvent event
+    ) {
         String deviceName =
-                resolveDeviceName(event.getDevice());
+                resolveDeviceName(
+                        event.getDevice()
+                );
 
         return switch (event.getEventType()) {
             case SOS ->
                     "An emergency SOS signal was received from "
-                            + deviceName + ".";
+                            + deviceName
+                            + ".";
 
             case TAMPER ->
                     "Possible tampering was detected on "
-                            + deviceName + ".";
+                            + deviceName
+                            + ".";
 
             case LOW_BATTERY ->
-                    deviceName + " reported a low battery level.";
+                    deviceName
+                            + " reported a low battery level.";
 
             case DEVICE_ONLINE ->
-                    deviceName + " connected to Guardian Cloud.";
+                    deviceName
+                            + " connected to Guardian Cloud.";
 
             case DEVICE_OFFLINE ->
-                    deviceName + " disconnected from Guardian Cloud.";
+                    deviceName
+                            + " disconnected from Guardian Cloud.";
 
             case GEOFENCE_ENTRY ->
-                    deviceName + " entered a monitored zone.";
+                    deviceName
+                            + " entered a monitored zone.";
 
             case GEOFENCE_EXIT ->
-                    deviceName + " left a monitored zone.";
+                    deviceName
+                            + " left a monitored zone.";
         };
     }
 
-    private String resolveDeviceName(Device device) {
+    private String resolveDeviceName(
+            Device device
+    ) {
         if (
                 device.getDisplayName() != null
-                        && !device.getDisplayName().isBlank()
+                        && !device
+                        .getDisplayName()
+                        .isBlank()
         ) {
             return device.getDisplayName();
         }
