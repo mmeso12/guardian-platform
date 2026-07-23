@@ -7,6 +7,8 @@ import com.guardian.cloud.entity.Device;
 import com.guardian.cloud.entity.DeviceEvent;
 import com.guardian.cloud.entity.DeviceStatus;
 import com.guardian.cloud.entity.EventType;
+import com.guardian.cloud.entity.Geofence;
+import com.guardian.cloud.entity.LocationRecord;
 import com.guardian.cloud.exception.DeviceNotFoundException;
 import com.guardian.cloud.exception.DuplicateDeviceEventException;
 import com.guardian.cloud.repository.DeviceEventRepository;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 public class DeviceEventService {
@@ -46,12 +49,11 @@ public class DeviceEventService {
                         )
                 );
 
-        boolean duplicate =
-                deviceEventRepository
-                        .existsByDeviceIdAndSequenceNumber(
-                                device.getId(),
-                                request.sequenceNumber()
-                        );
+        boolean duplicate = deviceEventRepository
+                .existsByDeviceIdAndSequenceNumber(
+                        device.getId(),
+                        request.sequenceNumber()
+                );
 
         if (duplicate) {
             throw new DuplicateDeviceEventException(
@@ -65,7 +67,9 @@ public class DeviceEventService {
         event.setDevice(device);
         event.setSequenceNumber(request.sequenceNumber());
         event.setEventType(request.eventType());
-        event.setSeverity(resolveSeverity(request.eventType()));
+        event.setSeverity(
+                resolveSeverity(request.eventType())
+        );
         event.setLatitude(request.latitude());
         event.setLongitude(request.longitude());
         event.setBatteryLevel(request.batteryLevel());
@@ -74,14 +78,19 @@ public class DeviceEventService {
 
         DeviceEvent savedEvent =
                 deviceEventRepository.save(event);
-                
-        guardianAlertFactory.createFromDeviceEvent(savedEvent);
+
+        guardianAlertFactory.createFromDeviceEvent(
+                savedEvent
+        );
 
         applyDeviceState(device, request);
+
         device.setLastSeenAt(Instant.now());
 
         if (request.batteryLevel() != null) {
-            device.setBatteryLevel(request.batteryLevel());
+            device.setBatteryLevel(
+                    request.batteryLevel()
+            );
         }
 
         deviceRepository.save(device);
@@ -97,17 +106,229 @@ public class DeviceEventService {
         );
     }
 
-    private AlertSeverity resolveSeverity(EventType eventType) {
+    @Transactional
+    public DeviceEvent createGeofenceEntryEvent(
+            LocationRecord locationRecord,
+            Geofence geofence,
+            double distanceMeters
+    ) {
+        return createGeofenceEvent(
+                locationRecord,
+                geofence,
+                EventType.GEOFENCE_ENTRY,
+                distanceMeters
+        );
+    }
+
+    @Transactional
+    public DeviceEvent createGeofenceExitEvent(
+            LocationRecord locationRecord,
+            Geofence geofence,
+            double distanceMeters
+    ) {
+        return createGeofenceEvent(
+                locationRecord,
+                geofence,
+                EventType.GEOFENCE_EXIT,
+                distanceMeters
+        );
+    }
+
+    private DeviceEvent createGeofenceEvent(
+            LocationRecord locationRecord,
+            Geofence geofence,
+            EventType eventType,
+            double distanceMeters
+    ) {
+        validateGeofenceEventArguments(
+                locationRecord,
+                geofence,
+                eventType
+        );
+
+        Device device = locationRecord.getDevice();
+
+        DeviceEvent event = new DeviceEvent();
+
+        event.setDevice(device);
+        event.setSequenceNumber(
+                generateInternalSequenceNumber(
+                        device.getId()
+                )
+        );
+        event.setEventType(eventType);
+        event.setSeverity(resolveSeverity(eventType));
+        event.setLatitude(
+                locationRecord.getLatitude()
+        );
+        event.setLongitude(
+                locationRecord.getLongitude()
+        );
+        event.setBatteryLevel(
+                locationRecord.getBatteryLevel()
+        );
+        event.setRecordedAt(
+                locationRecord.getRecordedAt()
+        );
+        event.setMetadata(
+                buildGeofenceMetadata(
+                        locationRecord,
+                        geofence,
+                        distanceMeters
+                )
+        );
+
+        DeviceEvent savedEvent =
+                deviceEventRepository.save(event);
+
+        guardianAlertFactory.createFromDeviceEvent(
+                savedEvent
+        );
+
+        return savedEvent;
+    }
+
+    private Long generateInternalSequenceNumber(
+			Long deviceId
+	) {
+		long sequenceNumber;
+
+		do {
+			long randomValue =
+					UUID.randomUUID()
+							.getLeastSignificantBits();
+
+			if (randomValue == Long.MIN_VALUE) {
+				sequenceNumber = Long.MIN_VALUE + 1;
+			} else {
+				sequenceNumber =
+						-Math.abs(randomValue);
+			}
+
+			if (sequenceNumber == 0) {
+				sequenceNumber = -1;
+			}
+		} while (
+				deviceEventRepository
+						.existsByDeviceIdAndSequenceNumber(
+								deviceId,
+								sequenceNumber
+						)
+		);
+
+		return sequenceNumber;
+	}
+
+    private String buildGeofenceMetadata(
+            LocationRecord locationRecord,
+            Geofence geofence,
+            double distanceMeters
+    ) {
+        return """
+                {
+                  "source": "GEOFENCE_MONITORING",
+                  "geofenceId": %d,
+                  "geofenceName": "%s",
+                  "radiusMeters": %.3f,
+                  "distanceMeters": %.3f,
+                  "locationRecordId": %d,
+                  "locationSequenceNumber": %d
+                }
+                """.formatted(
+                geofence.getId(),
+                escapeJson(geofence.getName()),
+                geofence.getRadiusMeters(),
+                distanceMeters,
+                locationRecord.getId(),
+                locationRecord.getSequenceNumber()
+        );
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
+
+    private void validateGeofenceEventArguments(
+            LocationRecord locationRecord,
+            Geofence geofence,
+            EventType eventType
+    ) {
+        if (locationRecord == null) {
+            throw new IllegalArgumentException(
+                    "Location record must not be null"
+            );
+        }
+
+        if (locationRecord.getId() == null) {
+            throw new IllegalArgumentException(
+                    "Location record must be persisted"
+            );
+        }
+
+        if (locationRecord.getDevice() == null) {
+            throw new IllegalArgumentException(
+                    "Location record must have a device"
+            );
+        }
+
+        if (locationRecord.getDevice().getId() == null) {
+            throw new IllegalArgumentException(
+                    "Location record device must be persisted"
+            );
+        }
+
+        if (locationRecord.getLatitude() == null
+                || locationRecord.getLongitude() == null) {
+            throw new IllegalArgumentException(
+                    "Location record must contain coordinates"
+            );
+        }
+
+        if (locationRecord.getRecordedAt() == null) {
+            throw new IllegalArgumentException(
+                    "Location record must contain recordedAt"
+            );
+        }
+
+        if (geofence == null || geofence.getId() == null) {
+            throw new IllegalArgumentException(
+                    "Geofence must be persisted"
+            );
+        }
+
+        if (eventType != EventType.GEOFENCE_ENTRY
+                && eventType != EventType.GEOFENCE_EXIT) {
+            throw new IllegalArgumentException(
+                    "Invalid geofence event type"
+            );
+        }
+    }
+
+    private AlertSeverity resolveSeverity(
+            EventType eventType
+    ) {
         return switch (eventType) {
-            case SOS -> AlertSeverity.EMERGENCY;
+            case SOS ->
+                    AlertSeverity.EMERGENCY;
 
             case TAMPER,
                  GEOFENCE_EXIT,
-                 LOW_BATTERY -> AlertSeverity.WARNING;
+                 LOW_BATTERY ->
+                    AlertSeverity.WARNING;
 
             case DEVICE_ONLINE,
                  DEVICE_OFFLINE,
-                 GEOFENCE_ENTRY -> AlertSeverity.INFORMATIONAL;
+                 GEOFENCE_ENTRY ->
+                    AlertSeverity.INFORMATIONAL;
         };
     }
 
@@ -117,19 +338,27 @@ public class DeviceEventService {
     ) {
         switch (request.eventType()) {
             case SOS ->
-                    device.setStatus(DeviceStatus.EMERGENCY);
+                    device.setStatus(
+                            DeviceStatus.EMERGENCY
+                    );
 
             case TAMPER ->
-                    device.setStatus(DeviceStatus.TAMPERED);
+                    device.setStatus(
+                            DeviceStatus.TAMPERED
+                    );
 
             case DEVICE_OFFLINE ->
-                    device.setStatus(DeviceStatus.OFFLINE);
+                    device.setStatus(
+                            DeviceStatus.OFFLINE
+                    );
 
             case DEVICE_ONLINE,
                  LOW_BATTERY,
                  GEOFENCE_ENTRY,
                  GEOFENCE_EXIT ->
-                    device.setStatus(DeviceStatus.ONLINE);
+                    device.setStatus(
+                            DeviceStatus.ONLINE
+                    );
         }
     }
 }
