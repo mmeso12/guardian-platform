@@ -20,6 +20,11 @@ public interface GeofenceRepository
             Long deviceId
     );
 
+    List<Geofence>
+    findAllByDeviceIdAndEnabledTrueOrderByCreatedAtAsc(
+            Long deviceId
+    );
+
     Optional<Geofence>
     findByIdAndGuardianUserId(
             Long geofenceId,

@@ -20,13 +20,16 @@ public class DeviceTelemetryService {
 
     private final DeviceRepository deviceRepository;
     private final LocationRecordRepository locationRecordRepository;
+    private final GeofenceMonitoringService geofenceMonitoringService;
 
     public DeviceTelemetryService(
             DeviceRepository deviceRepository,
-            LocationRecordRepository locationRecordRepository
+            LocationRecordRepository locationRecordRepository,
+            GeofenceMonitoringService geofenceMonitoringService
     ) {
         this.deviceRepository = deviceRepository;
         this.locationRecordRepository = locationRecordRepository;
+        this.geofenceMonitoringService = geofenceMonitoringService;
     }
 
     @Transactional
@@ -36,15 +39,16 @@ public class DeviceTelemetryService {
         Device device = deviceRepository
                 .findByDeviceUid(request.deviceUid())
                 .orElseThrow(
-                        () -> new DeviceNotFoundException(request.deviceUid())
+                        () -> new DeviceNotFoundException(
+                                request.deviceUid()
+                        )
                 );
 
-        boolean duplicateExists =
-                locationRecordRepository
-                        .existsByDeviceIdAndSequenceNumber(
-                                device.getId(),
-                                request.sequenceNumber()
-                        );
+        boolean duplicateExists = locationRecordRepository
+                .existsByDeviceIdAndSequenceNumber(
+                        device.getId(),
+                        request.sequenceNumber()
+                );
 
         if (duplicateExists) {
             throw new DuplicateTelemetryException(
@@ -53,11 +57,13 @@ public class DeviceTelemetryService {
             );
         }
 
-        Long lastSequenceNumber = device.getLastSequenceNumber();
+        Long lastSequenceNumber =
+                device.getLastSequenceNumber();
 
         if (
-                lastSequenceNumber != null &&
-                request.sequenceNumber() <= lastSequenceNumber
+                lastSequenceNumber != null
+                        && request.sequenceNumber()
+                        <= lastSequenceNumber
         ) {
             throw new DuplicateTelemetryException(
                     request.deviceUid(),
@@ -70,12 +76,31 @@ public class DeviceTelemetryService {
         LocationRecord locationRecord =
                 createLocationRecord(device, request);
 
-        locationRecordRepository.save(locationRecord);
+        LocationRecord savedLocationRecord =
+                locationRecordRepository.save(
+                        locationRecord
+                );
 
-        device.setBatteryLevel(request.batteryLevel());
-        device.setMotionState(request.motionState());
-        device.setFirmwareVersion(request.firmwareVersion());
-        device.setLastSequenceNumber(request.sequenceNumber());
+        /*
+         * Evaluate all enabled geofences after the
+         * location record has been persisted.
+         */
+        geofenceMonitoringService.evaluateLocation(
+                savedLocationRecord
+        );
+
+        device.setBatteryLevel(
+                request.batteryLevel()
+        );
+        device.setMotionState(
+                request.motionState()
+        );
+        device.setFirmwareVersion(
+                request.firmwareVersion()
+        );
+        device.setLastSequenceNumber(
+                request.sequenceNumber()
+        );
         device.setLastSeenAt(receivedAt);
         device.setStatus(DeviceStatus.ONLINE);
 
@@ -93,22 +118,40 @@ public class DeviceTelemetryService {
             Device device,
             DeviceTelemetryRequest request
     ) {
-        LocationPayload location = request.location();
+        LocationPayload location =
+                request.location();
 
-        LocationRecord record = new LocationRecord();
+        LocationRecord record =
+                new LocationRecord();
 
         record.setDevice(device);
-        record.setSequenceNumber(request.sequenceNumber());
-        record.setLatitude(location.latitude());
-        record.setLongitude(location.longitude());
-        record.setAccuracyMeters(location.accuracyMeters());
+        record.setSequenceNumber(
+                request.sequenceNumber()
+        );
+        record.setLatitude(
+                location.latitude()
+        );
+        record.setLongitude(
+                location.longitude()
+        );
+        record.setAccuracyMeters(
+                location.accuracyMeters()
+        );
         record.setSpeedMetersPerSecond(
                 location.speedMetersPerSecond()
         );
-        record.setHeadingDegrees(location.headingDegrees());
-        record.setBatteryLevel(request.batteryLevel());
-        record.setMotionState(request.motionState());
-        record.setRecordedAt(request.recordedAt());
+        record.setHeadingDegrees(
+                location.headingDegrees()
+        );
+        record.setBatteryLevel(
+                request.batteryLevel()
+        );
+        record.setMotionState(
+                request.motionState()
+        );
+        record.setRecordedAt(
+                request.recordedAt()
+        );
 
         return record;
     }
