@@ -361,4 +361,133 @@ public class DeviceEventService {
                     );
         }
     }
+
+	private void validateAvailabilityEventArguments(
+			Device device,
+			EventType eventType,
+			Instant detectedAt
+	) {
+		if (device == null || device.getId() == null) {
+			throw new IllegalArgumentException(
+					"Availability event requires a persisted device"
+			);
+		}
+
+		if (
+				eventType != EventType.DEVICE_OFFLINE
+						&& eventType != EventType.DEVICE_ONLINE
+		) {
+			throw new IllegalArgumentException(
+					"Invalid availability event type"
+			);
+		}
+
+		if (detectedAt == null) {
+			throw new IllegalArgumentException(
+					"Availability event detectedAt must not be null"
+			);
+		}
+	}
+
+	private String buildAvailabilityMetadata(
+			EventType eventType,
+			Instant detectedAt,
+			Instant previousLastSeenAt
+	) {
+		String source = eventType == EventType.DEVICE_OFFLINE
+				? "DEVICE_OFFLINE_MONITOR"
+				: "DEVICE_RECONNECTION";
+
+		String previousSeenValue =
+				previousLastSeenAt == null
+						? "null"
+						: "\""
+						+ previousLastSeenAt
+						+ "\"";
+
+		return """
+				{
+				"source": "%s",
+				"detectedAt": "%s",
+				"previousLastSeenAt": %s
+				}
+				""".formatted(
+				source,
+				detectedAt,
+				previousSeenValue
+		);
+	}
+
+	private DeviceEvent createAvailabilityEvent(
+			Device device,
+			EventType eventType,
+			Instant detectedAt,
+			Instant previousLastSeenAt
+	) {
+		validateAvailabilityEventArguments(
+				device,
+				eventType,
+				detectedAt
+		);
+
+		DeviceEvent event = new DeviceEvent();
+
+		event.setDevice(device);
+
+		event.setSequenceNumber(
+				generateInternalSequenceNumber(
+						device.getId()
+				)
+		);
+
+		event.setEventType(eventType);
+		event.setSeverity(resolveSeverity(eventType));
+		event.setBatteryLevel(device.getBatteryLevel());
+		event.setRecordedAt(detectedAt);
+
+		event.setMetadata(
+				buildAvailabilityMetadata(
+						eventType,
+						detectedAt,
+						previousLastSeenAt
+				)
+		);
+
+		DeviceEvent savedEvent =
+				deviceEventRepository.save(event);
+
+		guardianAlertFactory.createFromDeviceEvent(
+				savedEvent
+		);
+
+		return savedEvent;
+	}
+
+	@Transactional
+	public DeviceEvent createDeviceOfflineEvent(
+			Device device,
+			Instant detectedAt,
+			Instant lastSeenAt
+	) {
+		return createAvailabilityEvent(
+				device,
+				EventType.DEVICE_OFFLINE,
+				detectedAt,
+				lastSeenAt
+		);
+	}
+
+	@Transactional
+	public DeviceEvent createDeviceOnlineEvent(
+			Device device,
+			Instant detectedAt,
+			Instant previousLastSeenAt
+	) {
+		return createAvailabilityEvent(
+				device,
+				EventType.DEVICE_ONLINE,
+				detectedAt,
+				previousLastSeenAt
+		);
+	}
 }
