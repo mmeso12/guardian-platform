@@ -2,30 +2,56 @@ package com.guardian.cloud.repository;
 
 import com.guardian.cloud.entity.Device;
 import com.guardian.cloud.entity.DeviceStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.List;
-import java.util.Optional;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface DeviceRepository extends JpaRepository<Device, Long> {
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 
-    Optional<Device> findByDeviceUid(String deviceUid);
+public interface DeviceRepository
+        extends JpaRepository<Device, Long> {
 
-    boolean existsByDeviceUid(String deviceUid);
+    Optional<Device> findByDeviceUid(
+            String deviceUid
+    );
 
-    List<Device> findAllByStatus(DeviceStatus status);
+    boolean existsByDeviceUid(
+            String deviceUid
+    );
+
+    List<Device> findAllByStatus(
+            DeviceStatus status
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            SELECT d
-            FROM Device d
-            WHERE d.deviceUid = :deviceUid
+            SELECT device
+            FROM Device device
+            WHERE device.deviceUid = :deviceUid
             """)
     Optional<Device> findByDeviceUidForUpdate(
-            @Param("deviceUid") String deviceUid
-);
+            @Param("deviceUid")
+            String deviceUid
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT device
+            FROM Device device
+            WHERE device.status = :status
+              AND device.lastSeenAt IS NOT NULL
+              AND device.lastSeenAt < :cutoff
+            ORDER BY device.lastSeenAt ASC
+            """)
+    List<Device> findStaleDevicesForUpdate(
+            @Param("status")
+            DeviceStatus status,
+
+            @Param("cutoff")
+            Instant cutoff
+    );
 }

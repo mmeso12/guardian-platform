@@ -21,15 +21,18 @@ public class DeviceTelemetryService {
     private final DeviceRepository deviceRepository;
     private final LocationRecordRepository locationRecordRepository;
     private final GeofenceMonitoringService geofenceMonitoringService;
+    private final DeviceEventService deviceEventService;
 
     public DeviceTelemetryService(
             DeviceRepository deviceRepository,
             LocationRecordRepository locationRecordRepository,
-            GeofenceMonitoringService geofenceMonitoringService
+            GeofenceMonitoringService geofenceMonitoringService,
+            DeviceEventService deviceEventService
     ) {
         this.deviceRepository = deviceRepository;
         this.locationRecordRepository = locationRecordRepository;
         this.geofenceMonitoringService = geofenceMonitoringService;
+        this.deviceEventService = deviceEventService;
     }
 
     @Transactional
@@ -43,6 +46,11 @@ public class DeviceTelemetryService {
                                 request.deviceUid()
                         )
                 );
+        DeviceStatus previousStatus =
+                device.getStatus();
+
+        Instant previousLastSeenAt =
+                device.getLastSeenAt();
 
         boolean duplicateExists = locationRecordRepository
                 .existsByDeviceIdAndSequenceNumber(
@@ -105,6 +113,14 @@ public class DeviceTelemetryService {
         device.setStatus(DeviceStatus.ONLINE);
 
         deviceRepository.save(device);
+
+        if (previousStatus == DeviceStatus.OFFLINE) {
+        deviceEventService.createDeviceOnlineEvent(
+                device,
+                receivedAt,
+                previousLastSeenAt
+        );
+        }
 
         return new DeviceTelemetryResponse(
                 device.getDeviceUid(),
