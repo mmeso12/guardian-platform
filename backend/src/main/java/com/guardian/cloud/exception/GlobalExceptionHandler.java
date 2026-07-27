@@ -192,6 +192,32 @@ public class GlobalExceptionHandler {
 	}
 
 	@ExceptionHandler(
+			EmergencyEscalationNotFoundException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleEmergencyEscalationNotFound(
+			EmergencyEscalationNotFoundException exception
+	) {
+		return buildResponse(
+				HttpStatus.NOT_FOUND,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
+			InvalidEmergencyEscalationStateException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleInvalidEmergencyEscalationState(
+			InvalidEmergencyEscalationStateException exception
+	) {
+		return buildResponse(
+				HttpStatus.CONFLICT,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
 			EmergencyContactNotFoundException.class
 	)
 	public ResponseEntity<?> handleEmergencyContactNotFound(

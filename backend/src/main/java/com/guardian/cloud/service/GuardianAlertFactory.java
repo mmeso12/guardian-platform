@@ -17,18 +17,23 @@ public class GuardianAlertFactory {
 
     private final GuardianNotificationService
             guardianNotificationService;
+    
+    private final EmergencyEscalationService
+            emergencyEscalationService;
 
     public GuardianAlertFactory(
-            GuardianAlertRepository
-                    guardianAlertRepository,
-            GuardianNotificationService
-                    guardianNotificationService
+            GuardianAlertRepository guardianAlertRepository,
+            GuardianNotificationService guardianNotificationService,
+            EmergencyEscalationService emergencyEscalationService
     ) {
         this.guardianAlertRepository =
                 guardianAlertRepository;
 
         this.guardianNotificationService =
                 guardianNotificationService;
+
+        this.emergencyEscalationService =
+                emergencyEscalationService;
     }
 
     @Transactional
@@ -71,6 +76,12 @@ public class GuardianAlertFactory {
         guardianNotificationService.createForAlert(
                 savedAlert
         );
+
+        if (savedAlert.getEventType() == EventType.SOS) {
+            emergencyEscalationService.createForSosAlert(
+                    savedAlert
+            );
+        }
 
         return savedAlert;
     }
