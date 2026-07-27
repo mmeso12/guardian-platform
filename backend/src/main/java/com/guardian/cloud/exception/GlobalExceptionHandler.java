@@ -191,6 +191,42 @@ public class GlobalExceptionHandler {
 		);
 	}
 
+	@ExceptionHandler(
+			EmergencyContactNotFoundException.class
+	)
+	public ResponseEntity<?> handleEmergencyContactNotFound(
+			EmergencyContactNotFoundException exception
+	) {
+		return buildResponse(
+				HttpStatus.NOT_FOUND,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
+			DuplicateEmergencyContactPriorityException.class
+	)
+	public ResponseEntity<?> handleDuplicateEmergencyContactPriority(
+			DuplicateEmergencyContactPriorityException exception
+	) {
+		return buildResponse(
+				HttpStatus.CONFLICT,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
+			InvalidEmergencyContactException.class
+	)
+	public ResponseEntity<?> handleInvalidEmergencyContact(
+			InvalidEmergencyContactException exception
+	) {
+		return buildResponse(
+				HttpStatus.BAD_REQUEST,
+				exception.getMessage()
+		);
+	}
+
 	@ExceptionHandler(DuplicateGeofenceNameException.class)
 	public ResponseEntity<Map<String, Object>>
 	handleDuplicateGeofenceName(
