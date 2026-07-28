@@ -290,6 +290,45 @@ public class GlobalExceptionHandler {
 		);
 	}
 
+	@ExceptionHandler(
+			DeviceCommandNotFoundException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleDeviceCommandNotFound(
+			DeviceCommandNotFoundException exception
+	) {
+		return buildResponse(
+				HttpStatus.NOT_FOUND,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
+			InvalidDeviceCommandStateException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleInvalidDeviceCommandState(
+			InvalidDeviceCommandStateException exception
+	) {
+		return buildResponse(
+				HttpStatus.CONFLICT,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
+			InvalidDeviceCommandPayloadException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleInvalidDeviceCommandPayload(
+			InvalidDeviceCommandPayloadException exception
+	) {
+		return buildResponse(
+				HttpStatus.BAD_REQUEST,
+				exception.getMessage()
+		);
+	}
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException exception
