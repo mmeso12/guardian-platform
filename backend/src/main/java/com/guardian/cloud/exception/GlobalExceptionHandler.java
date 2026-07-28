@@ -264,6 +264,32 @@ public class GlobalExceptionHandler {
 		);
 	}
 
+	@ExceptionHandler(
+			GuardianMobileDeviceNotFoundException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleGuardianMobileDeviceNotFound(
+			GuardianMobileDeviceNotFoundException exception
+	) {
+		return buildResponse(
+				HttpStatus.NOT_FOUND,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
+			PushTokenAlreadyRegisteredException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handlePushTokenAlreadyRegistered(
+			PushTokenAlreadyRegisteredException exception
+	) {
+		return buildResponse(
+				HttpStatus.CONFLICT,
+				exception.getMessage()
+		);
+	}
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException exception
