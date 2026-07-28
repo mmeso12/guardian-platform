@@ -27,17 +27,25 @@ public class GuardianNotificationService {
     private final GuardianDeviceAccessRepository
             accessRepository;
 
+    private final PushNotificationDispatcher
+            pushNotificationDispatcher;
+
     public GuardianNotificationService(
             GuardianNotificationRepository
                     notificationRepository,
             GuardianDeviceAccessRepository
-                    accessRepository
+                    accessRepository,
+            PushNotificationDispatcher
+                    pushNotificationDispatcher
     ) {
         this.notificationRepository =
                 notificationRepository;
 
         this.accessRepository =
                 accessRepository;
+
+        this.pushNotificationDispatcher =
+                pushNotificationDispatcher;
     }
 
     /**
@@ -91,9 +99,16 @@ public class GuardianNotificationService {
             return List.of();
         }
 
-        return notificationRepository.saveAll(
-                notifications
+        List<GuardianNotification> savedNotifications =
+                notificationRepository.saveAll(
+                        notifications
+                );
+
+        pushNotificationDispatcher.dispatch(
+                savedNotifications
         );
+
+        return savedNotifications;
     }
 
     @Transactional(readOnly = true)
