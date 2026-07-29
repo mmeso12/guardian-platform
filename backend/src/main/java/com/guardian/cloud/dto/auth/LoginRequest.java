@@ -2,6 +2,7 @@ package com.guardian.cloud.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public record LoginRequest(
 
@@ -10,6 +11,12 @@ public record LoginRequest(
         String email,
 
         @NotBlank
-        String password
+        String password,
+
+        @Size(max = 150)
+        String deviceName,
+
+        @Size(max = 50)
+        String platform
 ) {
 }

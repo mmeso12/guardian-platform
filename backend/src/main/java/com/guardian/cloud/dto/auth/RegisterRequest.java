@@ -29,6 +29,12 @@ public record RegisterRequest(
 
         @NotBlank
         @Size(min = 8, max = 100)
-        String password
+        String password,
+
+        @Size(max = 150)
+        String deviceName,
+
+        @Size(max = 50)
+        String platform
 ) {
 }

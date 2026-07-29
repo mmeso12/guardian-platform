@@ -329,6 +329,33 @@ public class GlobalExceptionHandler {
 		);
 	}
 
+	@ExceptionHandler(
+			InvalidRefreshTokenException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleInvalidRefreshToken(
+			InvalidRefreshTokenException exception
+	) {
+		return buildResponse(
+				HttpStatus.UNAUTHORIZED,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler({
+			InvalidAccountTokenException.class,
+			CurrentPasswordIncorrectException.class
+	})
+	public ResponseEntity<Map<String, Object>>
+	handleInvalidAccountOperation(
+			RuntimeException exception
+	) {
+		return buildResponse(
+				HttpStatus.BAD_REQUEST,
+				exception.getMessage()
+		);
+	}
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException exception
