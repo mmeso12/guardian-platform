@@ -70,6 +70,18 @@ public class GuardianUser {
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
+
+    @Column(name = "password_changed_at")
+    private Instant passwordChangedAt;
+
+    @Column(
+            name = "account_version",
+            nullable = false
+    )
+    private long accountVersion;
+
     @Column(
             name = "created_at",
             nullable = false,
@@ -179,5 +191,35 @@ public class GuardianUser {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(Instant lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public Instant getPasswordChangedAt() {
+        return passwordChangedAt;
+    }
+
+    public void setPasswordChangedAt(
+            Instant passwordChangedAt
+    ) {
+        this.passwordChangedAt = passwordChangedAt;
+    }
+
+    public long getAccountVersion() {
+        return accountVersion;
+    }
+
+    public void setAccountVersion(long accountVersion) {
+        this.accountVersion = accountVersion;
+    }
+
+    public void incrementAccountVersion() {
+        this.accountVersion++;
     }
 }

@@ -1,6 +1,7 @@
 package com.guardian.cloud.security;
 
 import com.guardian.cloud.entity.GuardianUser;
+import com.guardian.cloud.repository.GuardianSessionRepository;
 import com.guardian.cloud.repository.GuardianUserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,13 +21,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final GuardianUserRepository guardianUserRepository;
+    private final GuardianSessionRepository
+        guardianSessionRepository;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
-            GuardianUserRepository guardianUserRepository
+            GuardianUserRepository guardianUserRepository,GuardianSessionRepository guardianSessionRepository
     ) {
         this.jwtService = jwtService;
         this.guardianUserRepository = guardianUserRepository;
+        this.guardianSessionRepository = guardianSessionRepository;
     }
 
     @Override
