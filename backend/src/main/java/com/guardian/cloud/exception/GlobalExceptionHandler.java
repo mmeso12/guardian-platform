@@ -295,6 +295,32 @@ public class GlobalExceptionHandler {
 	}
 
 	@ExceptionHandler(
+			DeviceChildAssignmentNotFoundException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleDeviceChildAssignmentNotFound(
+			DeviceChildAssignmentNotFoundException exception
+	) {
+		return buildResponse(
+				HttpStatus.NOT_FOUND,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
+			DeviceAlreadyAssignedException.class
+	)
+	public ResponseEntity<Map<String, Object>>
+	handleDeviceAlreadyAssigned(
+			DeviceAlreadyAssignedException exception
+	) {
+		return buildResponse(
+				HttpStatus.CONFLICT,
+				exception.getMessage()
+		);
+	}
+
+	@ExceptionHandler(
 			DeviceCommandNotFoundException.class
 	)
 	public ResponseEntity<Map<String, Object>>
