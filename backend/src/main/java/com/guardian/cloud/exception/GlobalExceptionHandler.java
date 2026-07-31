@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.guardian.cloud.exception.AlertAccessDeniedException;
 import com.guardian.cloud.exception.GuardianAlertNotFoundException;
 import com.guardian.cloud.exception.InvalidAlertStateException;
+import com.guardian.cloud.exception.ChildProfileNotFoundException;
+
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -340,6 +344,26 @@ public class GlobalExceptionHandler {
 				HttpStatus.UNAUTHORIZED,
 				exception.getMessage()
 		);
+	}
+
+	@ExceptionHandler(ChildProfileNotFoundException.class)
+	public ResponseEntity<Map<String, Object>>
+	handleChildProfileNotFound(
+			ChildProfileNotFoundException exception,
+			HttpServletRequest request
+	) {
+		Map<String, Object> body =
+				new LinkedHashMap<>();
+
+		body.put("timestamp", Instant.now());
+		body.put("status", 404);
+		body.put("error", "Not Found");
+		body.put("message", exception.getMessage());
+		body.put("path", request.getRequestURI());
+
+		return ResponseEntity
+				.status(HttpStatus.NOT_FOUND)
+				.body(body);
 	}
 
 	@ExceptionHandler({
