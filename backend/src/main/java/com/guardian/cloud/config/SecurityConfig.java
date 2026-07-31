@@ -57,7 +57,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/me")
                         .authenticated()
 
-                        .requestMatchers("/api/v1/account/**")
+                        .requestMatchers("/api/v1/account/**",
+                                "/api/v1/children/**"
+                        )
                         .authenticated()
 
                         .anyRequest()
