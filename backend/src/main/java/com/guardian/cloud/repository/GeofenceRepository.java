@@ -44,4 +44,9 @@ public interface GeofenceRepository
             String name,
             Long geofenceId
     );
+
+    long countByGuardianUserIdAndDeviceIdAndEnabledTrue(
+            Long guardianUserId,
+            Long deviceId
+    );
 }

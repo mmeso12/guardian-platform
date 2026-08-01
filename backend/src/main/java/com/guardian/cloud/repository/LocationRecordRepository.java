@@ -13,6 +13,11 @@ public interface LocationRecordRepository
     Optional<LocationRecord>
     findTopByDeviceIdOrderByRecordedAtDesc(Long deviceId);
 
+    Optional<LocationRecord>
+    findFirstByDeviceIdOrderByRecordedAtDesc(
+            Long deviceId
+    );
+
     List<LocationRecord>
     findTop100ByDeviceIdOrderByRecordedAtDesc(Long deviceId);
 

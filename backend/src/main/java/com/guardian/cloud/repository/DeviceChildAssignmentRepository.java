@@ -29,6 +29,11 @@ public interface DeviceChildAssignmentRepository
             Long childProfileId
     );
 
+    Optional<DeviceChildAssignment>
+    findFirstByChildProfileIdAndActiveTrueOrderByAssignedAtDesc(
+            Long childProfileId
+    );
+
     List<DeviceChildAssignment>
     findAllByDeviceIdOrderByAssignedAtDesc(
             Long deviceId

@@ -35,4 +35,20 @@ public interface GuardianAlertRepository
     Optional<GuardianAlert> findByIdForUpdate(
             @Param("alertId") Long alertId
     );
+
+    long countByDeviceIdAndStatus(
+            Long deviceId,
+            AlertStatus status
+    );
+
+    Optional<GuardianAlert>
+    findFirstByDeviceIdOrderByCreatedAtDesc(
+            Long deviceId
+    );
+
+    Optional<GuardianAlert>
+    findFirstByDeviceIdAndStatusOrderByCreatedAtDesc(
+            Long deviceId,
+            AlertStatus status
+    );
 }
