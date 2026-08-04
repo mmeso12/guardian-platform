@@ -14,12 +14,16 @@ public interface GuardianNotificationRepository
         extends JpaRepository<GuardianNotification, Long> {
 
     List<GuardianNotification>
-    findAllByGuardianUserIdOrderByCreatedAtDesc(
+    findAllByGuardianUserIdAndVisibleInAppTrueOrderByCreatedAtDesc(
+            Long guardianUserId
+    );
+
+    long countByGuardianUserIdAndVisibleInAppTrueAndReadAtIsNull(
             Long guardianUserId
     );
 
     Optional<GuardianNotification>
-    findByIdAndGuardianUserId(
+    findByIdAndGuardianUserIdAndVisibleInAppTrue(
             Long notificationId,
             Long guardianUserId
     );
@@ -29,19 +33,15 @@ public interface GuardianNotificationRepository
             Long guardianAlertId
     );
 
-    long countByGuardianUserIdAndReadAtIsNull(
-            Long guardianUserId
-    );
-
-    @Modifying(clearAutomatically = true)
+    @Modifying
     @Query("""
             UPDATE GuardianNotification notification
-            SET notification.readAt = :readAt,
-                notification.updatedAt = :readAt
-            WHERE notification.guardianUser.id = :guardianUserId
-              AND notification.readAt IS NULL
+               SET notification.readAt = :readAt
+             WHERE notification.guardianUser.id = :guardianUserId
+               AND notification.visibleInApp = true
+               AND notification.readAt IS NULL
             """)
-    int markAllUnreadAsRead(
+    int markAllVisibleUnreadAsRead(
             @Param("guardianUserId")
             Long guardianUserId,
 

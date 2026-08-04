@@ -71,6 +71,12 @@ public class GuardianNotification {
     )
     private Instant updatedAt;
 
+    @Column(
+            name = "visible_in_app",
+            nullable = false
+    )
+    private boolean visibleInApp = true;
+
     @PrePersist
     private void prePersist() {
         Instant now = Instant.now();
@@ -129,5 +135,15 @@ public class GuardianNotification {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isVisibleInApp() {
+        return visibleInApp;
+    }
+
+    public void setVisibleInApp(
+            boolean visibleInApp
+    ) {
+        this.visibleInApp = visibleInApp;
     }
 }
