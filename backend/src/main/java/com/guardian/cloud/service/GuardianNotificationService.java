@@ -7,6 +7,7 @@ import com.guardian.cloud.entity.Device;
 import com.guardian.cloud.entity.GuardianAlert;
 import com.guardian.cloud.entity.GuardianDeviceAccess;
 import com.guardian.cloud.entity.GuardianNotification;
+import com.guardian.cloud.entity.GuardianNotificationPreference;
 import com.guardian.cloud.entity.GuardianUser;
 import com.guardian.cloud.exception.GuardianNotificationNotFoundException;
 import com.guardian.cloud.repository.GuardianDeviceAccessRepository;
@@ -30,13 +31,18 @@ public class GuardianNotificationService {
     private final PushNotificationDispatcher
             pushNotificationDispatcher;
 
+    private final GuardianNotificationPreferenceService
+            preferenceService;
+
     public GuardianNotificationService(
             GuardianNotificationRepository
                     notificationRepository,
             GuardianDeviceAccessRepository
                     accessRepository,
             PushNotificationDispatcher
-                    pushNotificationDispatcher
+                    pushNotificationDispatcher,
+            GuardianNotificationPreferenceService
+                    preferenceService
     ) {
         this.notificationRepository =
                 notificationRepository;
@@ -46,11 +52,20 @@ public class GuardianNotificationService {
 
         this.pushNotificationDispatcher =
                 pushNotificationDispatcher;
+
+        this.preferenceService =
+                preferenceService;
     }
 
     /**
-     * Creates one notification for each enabled guardian
-     * who has access to the alert's device.
+     * Creates notifications for eligible guardians.
+     *
+     * A notification may be:
+     * - visible in-app only;
+     * - sent through push only;
+     * - delivered through both channels.
+     *
+     * Emergency notifications always use both channels.
      */
     @Transactional
     public List<GuardianNotification> createForAlert(
@@ -63,15 +78,44 @@ public class GuardianNotificationService {
                         alert.getDevice().getId()
                 );
 
+        if (
+                accessEntries == null
+                        || accessEntries.isEmpty()
+        ) {
+            return List.of();
+        }
+
         List<GuardianNotification> notifications =
                 new ArrayList<>();
 
-        for (GuardianDeviceAccess access : accessEntries) {
-            GuardianUser guardian = access.getUser();
+        /*
+         * This separate list ensures that only
+         * push-enabled notifications are dispatched.
+         */
+        List<GuardianNotification> pushNotifications =
+                new ArrayList<>();
 
-            if (guardian == null
-                    || guardian.getId() == null
-                    || !guardian.isEnabled()) {
+        for (GuardianDeviceAccess access : accessEntries) {
+
+            /*
+             * Only guardians permitted to manage alerts
+             * should receive alert notifications.
+             */
+            if (!access.isCanManageAlerts()) {
+                continue;
+            }
+
+            GuardianUser guardian =
+                    access.getUser();
+
+            /*
+             * This check must happen before guardian.getId().
+             */
+            if (
+                    guardian == null
+                            || guardian.getId() == null
+                            || !guardian.isEnabled()
+            ) {
                 continue;
             }
 
@@ -86,13 +130,54 @@ public class GuardianNotificationService {
                 continue;
             }
 
+            GuardianNotificationPreference preference =
+                    preferenceService.getOrCreate(
+                            guardian.getId()
+                    );
+
+            boolean visibleInApp =
+                    preferenceService
+                            .shouldCreateInAppNotification(
+                                    preference,
+                                    alert.getEventType(),
+                                    alert.getSeverity()
+                            );
+
+            boolean pushEnabled =
+                    preferenceService.shouldSendPush(
+                            preference,
+                            alert.getEventType(),
+                            alert.getSeverity()
+                    );
+
+            /*
+             * When both channels are disabled for an
+             * ordinary event, no record is necessary.
+             */
+            if (!visibleInApp && !pushEnabled) {
+                continue;
+            }
+
             GuardianNotification notification =
                     new GuardianNotification();
 
-            notification.setGuardianUser(guardian);
-            notification.setGuardianAlert(alert);
+            notification.setGuardianUser(
+                    guardian
+            );
+
+            notification.setGuardianAlert(
+                    alert
+            );
+
+            notification.setVisibleInApp(
+                    visibleInApp
+            );
 
             notifications.add(notification);
+
+            if (pushEnabled) {
+                pushNotifications.add(notification);
+            }
         }
 
         if (notifications.isEmpty()) {
@@ -104,18 +189,31 @@ public class GuardianNotificationService {
                         notifications
                 );
 
-        pushNotificationDispatcher.dispatch(
-                savedNotifications
-        );
+        /*
+         * The objects placed in pushNotifications are
+         * the same managed entities saved above, so they
+         * now contain their generated IDs.
+         */
+        if (!pushNotifications.isEmpty()) {
+            pushNotificationDispatcher.dispatch(
+                    pushNotifications
+            );
+        }
 
         return savedNotifications;
     }
 
+    /**
+     * Returns only notifications intended for the
+     * guardian's in-app notification list.
+     */
     @Transactional(readOnly = true)
     public List<GuardianNotificationResponse>
-    getNotifications(Long guardianUserId) {
+    getNotifications(
+            Long guardianUserId
+    ) {
         return notificationRepository
-                .findAllByGuardianUserIdOrderByCreatedAtDesc(
+                .findAllByGuardianUserIdAndVisibleInAppTrueOrderByCreatedAtDesc(
                         guardianUserId
                 )
                 .stream()
@@ -123,19 +221,30 @@ public class GuardianNotificationService {
                 .toList();
     }
 
+    /**
+     * Counts unread notifications that are visible
+     * in the application.
+     */
     @Transactional(readOnly = true)
     public UnreadNotificationCountResponse
-    getUnreadCount(Long guardianUserId) {
-        long unreadCount = notificationRepository
-                .countByGuardianUserIdAndReadAtIsNull(
-                        guardianUserId
-                );
+    getUnreadCount(
+            Long guardianUserId
+    ) {
+        long unreadCount =
+                notificationRepository
+                        .countByGuardianUserIdAndVisibleInAppTrueAndReadAtIsNull(
+                                guardianUserId
+                        );
 
         return new UnreadNotificationCountResponse(
                 unreadCount
         );
     }
 
+    /**
+     * Marks one guardian-owned, visible notification
+     * as read.
+     */
     @Transactional
     public GuardianNotificationResponse markAsRead(
             Long guardianUserId,
@@ -143,7 +252,7 @@ public class GuardianNotificationService {
     ) {
         GuardianNotification notification =
                 notificationRepository
-                        .findByIdAndGuardianUserId(
+                        .findByIdAndGuardianUserIdAndVisibleInAppTrue(
                                 notificationId,
                                 guardianUserId
                         )
@@ -155,7 +264,9 @@ public class GuardianNotificationService {
                         );
 
         if (notification.getReadAt() == null) {
-            notification.setReadAt(Instant.now());
+            notification.setReadAt(
+                    Instant.now()
+            );
 
             notification =
                     notificationRepository.save(
@@ -166,13 +277,16 @@ public class GuardianNotificationService {
         return toResponse(notification);
     }
 
+    /**
+     * Marks all unread, visible notifications as read.
+     */
     @Transactional
     public NotificationReadAllResponse markAllAsRead(
             Long guardianUserId
     ) {
         int updatedCount =
                 notificationRepository
-                        .markAllUnreadAsRead(
+                        .markAllVisibleUnreadAsRead(
                                 guardianUserId,
                                 Instant.now()
                         );
@@ -188,7 +302,8 @@ public class GuardianNotificationService {
         GuardianAlert alert =
                 notification.getGuardianAlert();
 
-        Device device = alert.getDevice();
+        Device device =
+                alert.getDevice();
 
         return new GuardianNotificationResponse(
                 notification.getId(),
@@ -217,7 +332,9 @@ public class GuardianNotificationService {
         );
     }
 
-    private void validateAlert(GuardianAlert alert) {
+    private void validateAlert(
+            GuardianAlert alert
+    ) {
         if (alert == null) {
             throw new IllegalArgumentException(
                     "Guardian alert must not be null"
@@ -230,10 +347,24 @@ public class GuardianNotificationService {
             );
         }
 
-        if (alert.getDevice() == null
-                || alert.getDevice().getId() == null) {
+        if (
+                alert.getDevice() == null
+                        || alert.getDevice().getId() == null
+        ) {
             throw new IllegalArgumentException(
                     "Guardian alert must have a persisted device"
+            );
+        }
+
+        if (alert.getEventType() == null) {
+            throw new IllegalArgumentException(
+                    "Guardian alert must have an event type"
+            );
+        }
+
+        if (alert.getSeverity() == null) {
+            throw new IllegalArgumentException(
+                    "Guardian alert must have a severity"
             );
         }
     }
